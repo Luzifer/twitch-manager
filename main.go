@@ -76,21 +76,27 @@ func main() {
 		log.WithError(err).Fatal("Unable to register webhooks")
 	}
 
+	var (
+		timerForceSync       = time.NewTicker(cfg.ForceSyncInterval)
+		timerUpdateFromAPI   = time.NewTicker(cfg.UpdateFromAPIInterval)
+		timerWebhookRegister = time.NewTicker(cfg.WebHookTimeout)
+	)
+
 	for {
 		select {
-		case <-time.NewTicker(cfg.WebHookTimeout).C:
-			if err := registerWebHooks(); err != nil {
-				log.WithError(err).Fatal("Unable to re-register webhooks")
+		case <-timerForceSync.C:
+			if err := sendAllSockets(store); err != nil {
+				log.WithError(err).Error("Unable to send store to all sockets")
 			}
 
-		case <-time.NewTicker(cfg.UpdateFromAPIInterval).C:
+		case <-timerUpdateFromAPI.C:
 			if err := updateStats(); err != nil {
 				log.WithError(err).Error("Unable to update statistics from API")
 			}
 
-		case <-time.NewTicker(cfg.ForceSyncInterval).C:
-			if err := sendAllSockets(store); err != nil {
-				log.WithError(err).Error("Unable to send store to all sockets")
+		case <-timerWebhookRegister.C:
+			if err := registerWebHooks(); err != nil {
+				log.WithError(err).Fatal("Unable to re-register webhooks")
 			}
 
 		}
