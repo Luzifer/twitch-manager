@@ -63,6 +63,7 @@ func main() {
 	registerAPI(router)
 
 	router.HandleFunc("/{file:(?:app.js|overlay.html)}", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache")
 		http.ServeFile(w, r, path.Join(cfg.AssetDir, mux.Vars(r)["file"]))
 	})
 
@@ -85,7 +86,7 @@ func main() {
 	for {
 		select {
 		case <-timerForceSync.C:
-			if err := sendAllSockets(store); err != nil {
+			if err := sendAllSockets(msgTypeStore, store); err != nil {
 				log.WithError(err).Error("Unable to send store to all sockets")
 			}
 

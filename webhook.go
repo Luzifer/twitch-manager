@@ -98,7 +98,7 @@ func handleWebHookPush(w http.ResponseWriter, r *http.Request) {
 		logger.WithError(err).Error("Unable to update persistent store")
 	}
 
-	if err := sendAllSockets(store); err != nil {
+	if err := sendAllSockets(msgTypeStore, store); err != nil {
 		logger.WithError(err).Error("Unable to send update to all sockets")
 	}
 }

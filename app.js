@@ -67,7 +67,15 @@ const app = new Vue({
       }
       this.socket.onmessage = evt => {
         const data = JSON.parse(evt.data)
-        this.store = data
+
+        switch (data.type) {
+          case 'store':
+            this.store = data
+            break
+
+          default:
+            console.log(`Unhandled message type ${data.type}`, data)
+        }
       }
       this.socket.onopen = evt => {
         this.conn.avail = true

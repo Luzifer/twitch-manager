@@ -77,7 +77,7 @@ func updateFollowers() error {
 	}
 
 	return errors.Wrap(
-		sendAllSockets(store),
+		sendAllSockets(msgTypeStore, store),
 		"update all sockets",
 	)
 }

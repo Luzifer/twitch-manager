@@ -13,17 +13,24 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+const (
+	msgTypeStore string = "store"
+)
+
 var (
 	socketSubscriptions     = map[string]func(msg interface{}) error{}
 	socketSubscriptionsLock = new(sync.RWMutex)
 )
 
-func sendAllSockets(msg interface{}) error {
+func sendAllSockets(msgType string, msg interface{}) error {
 	socketSubscriptionsLock.RLock()
 	defer socketSubscriptionsLock.RUnlock()
 
 	for _, hdl := range socketSubscriptions {
-		if err := hdl(msg); err != nil {
+		if err := hdl(map[string]interface{}{
+			"payload": msg,
+			"type":    msgType,
+		}); err != nil {
 			return errors.Wrap(err, "submit message")
 		}
 	}
@@ -80,7 +87,10 @@ func handleUpdateSocket(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	if err := conn.WriteJSON(store); err != nil {
+	if err := conn.WriteJSON(map[string]interface{}{
+		"payload": store,
+		"type":    msgTypeStore,
+	}); err != nil {
 		log.WithError(err).Error("Unable to send initial state")
 		return
 	}
