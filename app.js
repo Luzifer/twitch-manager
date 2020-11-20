@@ -13,11 +13,6 @@ const app = new Vue({
       }
 
       return icons
-      return [
-        // { class: 'fab fa-discord' },
-        // { class: 'fab fa-spotify' },
-        // { class: 'fab fa-teamspeak' },
-      ]
     },
 
     nextFollowers() {
