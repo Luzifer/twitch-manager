@@ -79,6 +79,7 @@ func handleWebHookPush(w http.ResponseWriter, r *http.Request) {
 		sort.Slice(payload.Data, func(i, j int) bool { return payload.Data[i].FollowedAt.Before(payload.Data[j].FollowedAt) })
 		for _, f := range payload.Data {
 			if str.StringInSlice(f.FromName, store.Followers.Seen) {
+				logger.WithField("name", f.FromName).Debug("New follower already known, skipping")
 				continue
 			}
 
