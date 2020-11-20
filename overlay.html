@@ -1,0 +1,62 @@
+<html>
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cabin+Sketch&family=Neucha&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/combine/npm/bootstrap@4/dist/css/bootstrap.min.css,npm/bootstrap-vue@2/dist/bootstrap-vue.min.css,npm/bootswatch@4/dist/sketchy/bootstrap.min.css">
+
+  <style>
+    body, html, #app {
+      background: transparent;
+    }
+    .bg-primary {
+      background-color: rgba(51, 51, 51, .8) !important;
+    }
+    .clock {
+      width: 50px;
+    }
+  </style>
+
+  <div id="app">
+    <b-container fluid>
+
+      <b-navbar
+        fixed="bottom"
+        type="dark"
+        variant="primary"
+      >
+        <b-navbar-brand href="#"><i class="fab fa-twitch"></i> Luziferus</b-navbar-brand>
+        <b-navbar-nav>
+          <b-nav-text class="mx-2" v-if="store.followers && store.followers.last">
+            <i class="fad fa-user"></i> {{ store.followers.last }}
+          </b-nav-text>
+          <b-nav-text class="mx-2" v-if="store.followers && store.followers.count">
+            <i class="fas fa-users"></i> {{ store.followers.count }} / {{ nextFollowers }}
+          </b-nav-text>
+          <b-nav-text class="mx-2" v-if="store.subs && store.subs.last">
+            <i class="fad fa-user-crown"></i> {{ store.subs.last }} <span v-if="store.subs.lastDuration > 1">(x{{ store.subs.lastDuration }})<span>
+          </b-nav-text>
+          <b-nav-text class="mx-2" v-if="store.subs && store.subs.count">
+            <i class="fas fa-users-crown"></i> {{ store.subs.count }} / {{ nextSubs }}
+          </b-nav-text>
+          <b-nav-text class="mx-2" v-if="store.donation && store.donation.last_donator">
+            <i class="fas fa-donate"></i> {{ store.donation.last_donator }}: {{ store.donation.last_amount.toFixed(2) }} &euro;
+          </b-nav-text>
+        </b-navbar-nav>
+
+        <!-- Right aligned nav items -->
+        <b-navbar-nav class="ml-auto">
+          <b-nav-text>
+            <i :class="[ icon.class, 'ml-2' ].join(' ')" v-for="icon in icons" :key="icon.class"></i>&ZeroWidthSpace;
+          </b-nav-text>
+          <b-nav-text class="ml-2 clock text-center">{{ clock }}</b-nav-text>
+        </b-navbar-nav>
+      </b-navbar>
+
+    </b-container>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/combine/npm/vue@2,npm/bootstrap-vue@2/dist/bootstrap-vue.min.js,npm/moment@2"></script>
+  <script src="https://kit.fontawesome.com/0caf4eb225.js" crossorigin="anonymous"></script>
+
+  <script src="app.js"></script>
+
+</html>
