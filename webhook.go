@@ -33,7 +33,7 @@ func handleWebHookPush(w http.ResponseWriter, r *http.Request) {
 
 	// When asked for a confirmation, just confirm it
 	if challengeToken := r.URL.Query().Get("hub.challenge"); challengeToken != "" {
-		logger.WithField("challenge", challengeToken).Debug("Confirming webhook subscription")
+		logger.Debug("Confirming webhook subscription")
 		w.Write([]byte(challengeToken))
 		return
 	}
