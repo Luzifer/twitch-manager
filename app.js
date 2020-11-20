@@ -37,6 +37,7 @@ const app = new Vue({
     store: {},
     socket: null,
     time: new Date(),
+    version: null,
   },
 
   el: '#app',
@@ -68,9 +69,13 @@ const app = new Vue({
       this.socket.onmessage = evt => {
         const data = JSON.parse(evt.data)
 
+        if (data.version) {
+          this.version = data.version
+        }
+
         switch (data.type) {
           case 'store':
-            this.store = data
+            this.store = data.payload
             break
 
           default:
@@ -91,6 +96,13 @@ const app = new Vue({
         return
       }
       this.showAlert('New Follower', `${to} just followed`)
+    },
+
+    version(to, from) {
+      if (!from || !to || from === to) {
+        return
+      }
+      window.location.reload()
     },
   },
 })

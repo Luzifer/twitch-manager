@@ -1,7 +1,10 @@
 package main
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -27,10 +30,7 @@ func sendAllSockets(msgType string, msg interface{}) error {
 	defer socketSubscriptionsLock.RUnlock()
 
 	for _, hdl := range socketSubscriptions {
-		if err := hdl(map[string]interface{}{
-			"payload": msg,
-			"type":    msgType,
-		}); err != nil {
+		if err := hdl(compileSocketMessage(msgType, msg)); err != nil {
 			return errors.Wrap(err, "submit message")
 		}
 	}
@@ -50,6 +50,27 @@ func unsubscribeSocket(id string) {
 	defer socketSubscriptionsLock.Unlock()
 
 	delete(socketSubscriptions, id)
+}
+
+func compileSocketMessage(msgType string, msg interface{}) map[string]interface{} {
+	assetVersionsLock.RLock()
+	defer assetVersionsLock.RUnlock()
+
+	versionParts := []string{version}
+	for _, asset := range assets {
+		versionParts = append(versionParts, assetVersions[asset])
+	}
+
+	hash := sha256.New()
+	hash.Write([]byte(strings.Join(versionParts, "/")))
+
+	ver := fmt.Sprintf("%x", hash.Sum(nil))
+
+	return map[string]interface{}{
+		"payload": msg,
+		"type":    msgType,
+		"version": ver,
+	}
 }
 
 var upgrader = websocket.Upgrader{
@@ -87,10 +108,7 @@ func handleUpdateSocket(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	if err := conn.WriteJSON(map[string]interface{}{
-		"payload": store,
-		"type":    msgTypeStore,
-	}); err != nil {
+	if err := conn.WriteJSON(compileSocketMessage(msgTypeStore, store)); err != nil {
 		log.WithError(err).Error("Unable to send initial state")
 		return
 	}
