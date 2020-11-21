@@ -23,20 +23,28 @@
         type="dark"
         variant="primary"
       >
+        <!-- Channel Brand -->
         <b-navbar-brand href="#"><i class="fab fa-twitch"></i> Luziferus</b-navbar-brand>
+
+        <!-- Left aligned nav items -->
         <b-navbar-nav>
+          <!-- Followers -->
+          <b-nav-text class="mx-2" v-if="store.followers && store.followers.count">
+            <i class="fas fa-users"></i> {{ store.followers.count }} / {{ nextFollowers }}
+          </b-nav-text>
           <b-nav-text class="mx-2" v-if="store.followers && store.followers.last">
             <i class="fad fa-user"></i> {{ store.followers.last }}
           </b-nav-text>
-          <b-nav-text class="mx-2" v-if="store.followers && store.followers.count">
-            <i class="fas fa-users"></i> {{ store.followers.count }} / {{ nextFollowers }}
+
+          <!-- Subs -->
+          <b-nav-text class="mx-2" v-if="store.subs && store.subs.count">
+            <i class="fas fa-users-crown"></i> {{ store.subs.count }} / {{ nextSubs }}
           </b-nav-text>
           <b-nav-text class="mx-2" v-if="store.subs && store.subs.last">
             <i class="fad fa-user-crown"></i> {{ store.subs.last }} <span v-if="store.subs.lastDuration > 1">(x{{ store.subs.lastDuration }})<span>
           </b-nav-text>
-          <b-nav-text class="mx-2" v-if="store.subs && store.subs.count">
-            <i class="fas fa-users-crown"></i> {{ store.subs.count }} / {{ nextSubs }}
-          </b-nav-text>
+
+          <!-- Donations -->
           <b-nav-text class="mx-2" v-if="store.donation && store.donation.last_donator">
             <i class="fas fa-donate"></i> {{ store.donation.last_donator }}: {{ store.donation.last_amount.toFixed(2) }} &euro;
           </b-nav-text>
@@ -44,9 +52,12 @@
 
         <!-- Right aligned nav items -->
         <b-navbar-nav class="ml-auto">
+          <!-- Icons -->
           <b-nav-text>
             <i :class="[ icon.class, 'ml-2' ].join(' ')" v-for="icon in icons" :key="icon.class"></i>&ZeroWidthSpace;
           </b-nav-text>
+
+          <!-- Clock -->
           <b-nav-text class="ml-2 clock text-center">{{ clock }}</b-nav-text>
         </b-navbar-nav>
       </b-navbar>
