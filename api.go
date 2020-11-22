@@ -93,25 +93,41 @@ func handleUpdateSocket(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	// Register listener
-	id := uuid.Must(uuid.NewV4()).String()
-	subscribeSocket(id, conn.WriteJSON)
+	var (
+		connLock = new(sync.Mutex)
+		id       = uuid.Must(uuid.NewV4()).String()
+	)
+	subscribeSocket(id, func(msg interface{}) error {
+		connLock.Lock()
+		defer connLock.Unlock()
+
+		return conn.WriteJSON(msg)
+	})
 	defer unsubscribeSocket(id)
 
 	keepAlive := time.NewTicker(5 * time.Second)
 	defer keepAlive.Stop()
 	go func() {
 		for range keepAlive.C {
+			connLock.Lock()
+
 			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				log.WithError(err).Error("Unable to send ping message")
+				connLock.Unlock()
 				conn.Close()
+				return
 			}
+
+			connLock.Unlock()
 		}
 	}()
 
+	connLock.Lock()
 	if err := conn.WriteJSON(compileSocketMessage(msgTypeStore, store)); err != nil {
 		log.WithError(err).Error("Unable to send initial state")
 		return
 	}
+	connLock.Unlock()
 
 	// Handle socket
 	for {
