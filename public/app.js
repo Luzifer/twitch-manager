@@ -52,11 +52,11 @@ const app = new Vue({
       this.sound.src = soundUrl
     },
 
-    showAlert(title, text) {
+    showAlert(title, text, variant) {
       this.$bvToast.toast(text, {
         title,
         toaster: 'b-toaster-top-right',
-        variant: 'primary',
+        variant: variant || 'primary',
       })
     },
 
@@ -83,6 +83,13 @@ const app = new Vue({
         }
 
         switch (data.type) {
+          case 'alert':
+            this.showAlert(data.payload.title, data.payload.text, data.payload.variant)
+            if (data.payload.sound) {
+              this.playSound(data.payload.sound)
+            }
+            break
+
           case 'store':
             this.store = data.payload
             break

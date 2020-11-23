@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -89,10 +90,36 @@ var upgrader = websocket.Upgrader{
 }
 
 func registerAPI(r *mux.Router) {
-	r.HandleFunc("/api/follows/clear-last", handleSetLastFollower)
-	r.HandleFunc("/api/follows/set-last/{name}", handleSetLastFollower)
-	r.HandleFunc("/api/subscribe", handleUpdateSocket)
+	r.HandleFunc("/api/custom-alert", handleCustomAlert).Methods(http.MethodPost)
+	r.HandleFunc("/api/follows/clear-last", handleSetLastFollower).Methods(http.MethodPut)
+	r.HandleFunc("/api/follows/set-last/{name}", handleSetLastFollower).Methods(http.MethodPut)
+	r.HandleFunc("/api/subscribe", handleUpdateSocket).Methods(http.MethodGet)
 	r.HandleFunc("/api/webhook/{type}", handleWebHookPush)
+}
+
+func handleCustomAlert(w http.ResponseWriter, r *http.Request) {
+	var alert struct {
+		Sound *string `json:"sound"`
+		Text  string  `json:"text"`
+		Title string  `json:"title"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&alert); err != nil {
+		http.Error(w, errors.Wrap(err, "parse request body").Error(), http.StatusBadRequest)
+		return
+	}
+
+	if alert.Title == "" || alert.Text == "" {
+		http.Error(w, "empty title or text", http.StatusBadRequest)
+		return
+	}
+
+	if err := subscriptions.SendAllSockets("alert", alert); err != nil {
+		http.Error(w, errors.Wrap(err, "send to sockets").Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
 }
 
 func handleSetLastFollower(w http.ResponseWriter, r *http.Request) {
