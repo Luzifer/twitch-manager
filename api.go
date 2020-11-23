@@ -16,20 +16,24 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const (
-	msgTypeStore string = "store"
-)
+const msgTypeStore string = "store"
 
 var subscriptions = newSubscriptionStore()
 
+type socketMessage struct {
+	Payload interface{} `json:"payload"`
+	Type    string      `json:"type"`
+	Version string      `json:"version"`
+}
+
 type subcriptionStore struct {
-	socketSubscriptions     map[string]func(interface{}) error
+	socketSubscriptions     map[string]func(socketMessage) error
 	socketSubscriptionsLock *sync.RWMutex
 }
 
 func newSubscriptionStore() *subcriptionStore {
 	return &subcriptionStore{
-		socketSubscriptions:     map[string]func(msg interface{}) error{},
+		socketSubscriptions:     map[string]func(socketMessage) error{},
 		socketSubscriptionsLock: new(sync.RWMutex),
 	}
 }
@@ -47,7 +51,7 @@ func (s subcriptionStore) SendAllSockets(msgType string, msg interface{}) error 
 	return nil
 }
 
-func (s *subcriptionStore) SubscribeSocket(id string, hdl func(interface{}) error) {
+func (s *subcriptionStore) SubscribeSocket(id string, hdl func(socketMessage) error) {
 	s.socketSubscriptionsLock.Lock()
 	defer s.socketSubscriptionsLock.Unlock()
 
@@ -61,7 +65,7 @@ func (s *subcriptionStore) UnsubscribeSocket(id string) {
 	delete(s.socketSubscriptions, id)
 }
 
-func compileSocketMessage(msgType string, msg interface{}) map[string]interface{} {
+func compileSocketMessage(msgType string, msg interface{}) socketMessage {
 	assetVersionsLock.RLock()
 	defer assetVersionsLock.RUnlock()
 
@@ -75,10 +79,10 @@ func compileSocketMessage(msgType string, msg interface{}) map[string]interface{
 
 	ver := fmt.Sprintf("%x", hash.Sum(nil))
 
-	return map[string]interface{}{
-		"payload": msg,
-		"type":    msgType,
-		"version": ver,
+	return socketMessage{
+		Payload: msg,
+		Type:    msgType,
+		Version: ver,
 	}
 }
 
@@ -106,7 +110,7 @@ func handleUpdateSocket(w http.ResponseWriter, r *http.Request) {
 		connLock = new(sync.Mutex)
 		id       = uuid.Must(uuid.NewV4()).String()
 	)
-	subscriptions.SubscribeSocket(id, func(msg interface{}) error {
+	subscriptions.SubscribeSocket(id, func(msg socketMessage) error {
 		connLock.Lock()
 		defer connLock.Unlock()
 
