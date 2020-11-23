@@ -92,13 +92,20 @@ var upgrader = websocket.Upgrader{
 }
 
 func registerAPI(r *mux.Router) {
-	r.HandleFunc("/api/follows/clear-last", handleClearLastFollower)
+	r.HandleFunc("/api/follows/clear-last", handleSetLastFollower)
+	r.HandleFunc("/api/follows/set-last/{name}", handleSetLastFollower)
 	r.HandleFunc("/api/subscribe", handleUpdateSocket)
 	r.HandleFunc("/api/webhook/{type}", handleWebHookPush)
 }
 
-func handleClearLastFollower(w http.ResponseWriter, r *http.Request) {
-	store.Followers.Last = nil
+func handleSetLastFollower(w http.ResponseWriter, r *http.Request) {
+	name := mux.Vars(r)["name"]
+
+	if name == "" {
+		store.Followers.Last = nil
+	} else {
+		store.Followers.Last = &name
+	}
 
 	if err := store.Save(cfg.StoreFile); err != nil {
 		log.WithError(err).Error("Unable to update persistent store")
