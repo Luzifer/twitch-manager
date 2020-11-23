@@ -27,6 +27,10 @@ const app = new Vue({
   created() {
     window.setInterval(() => { this.time = new Date() }, 1000)
     this.startSocket()
+
+    this.sound = new Audio()
+    this.sound.addEventListener('load', () => this.sound.play(), true)
+    this.sound.autoplay = true
   },
 
   data: {
@@ -34,6 +38,7 @@ const app = new Vue({
       avail: false,
       backoff: 100,
     },
+    sound: null,
     store: {},
     socket: null,
     time: new Date(),
@@ -43,6 +48,10 @@ const app = new Vue({
   el: '#app',
 
   methods: {
+    playSound(soundUrl) {
+      this.sound.src = soundUrl
+    },
+
     showAlert(title, text) {
       this.$bvToast.toast(text, {
         title,
@@ -96,6 +105,7 @@ const app = new Vue({
         return
       }
       this.showAlert('New Follower', `${to} just followed`)
+      this.playSound('/public/doorbell.webm')
     },
 
     version(to, from) {
