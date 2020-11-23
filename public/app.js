@@ -38,6 +38,7 @@ const app = new Vue({
       avail: false,
       backoff: 100,
     },
+    firstLoad: true,
     sound: null,
     store: {},
     socket: null,
@@ -92,6 +93,7 @@ const app = new Vue({
 
           case 'store':
             this.store = data.payload
+            window.setTimeout(() => { this.firstLoad = false }, 100) // Delayed to let the watches trigger
             break
 
           default:
@@ -107,11 +109,11 @@ const app = new Vue({
 
   watch: {
     'store.followers.last'(to, from) {
-      if (!from || !to) {
-        // Initial load
+      if (this.firstLoad || !to) {
+        // Initial load or no follower
         return
       }
-      this.showAlert('New Follower', `${to} just followed`)
+      this.showAlert('New Follower', `${to} just followed`, 'success')
       this.playSound('/public/doorbell.webm')
     },
 
