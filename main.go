@@ -1,19 +1,13 @@
 package main
 
 import (
-	"crypto/sha256"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
-	"path"
-	"strings"
-	"sync"
 	"time"
 
 	"github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/Luzifer/rconfig/v2"
@@ -35,10 +29,6 @@ var (
 		VersionAndExit        bool          `flag:"version" default:"false" description:"Prints current version and exits"`
 		WebHookTimeout        time.Duration `flag:"webhook-timeout" default:"15m" description:"When to re-register the webhooks"`
 	}{}
-
-	assets            = []string{"app.js", "overlay.html"}
-	assetVersions     = map[string]string{}
-	assetVersionsLock = new(sync.RWMutex)
 
 	store         *storage
 	webhookSecret = uuid.Must(uuid.NewV4()).String()
@@ -70,20 +60,20 @@ func main() {
 		log.WithError(err).Fatal("Unable to load store")
 	}
 
-	if err := updateAssetHashes(); err != nil {
+	if err := assetVersions.UpdateAssetHashes(cfg.AssetDir); err != nil {
 		log.WithError(err).Fatal("Unable to read asset hashes")
 	}
 
-	router := mux.NewRouter()
+	var (
+		assetServer = http.FileServer(http.Dir(cfg.AssetDir))
+		router      = mux.NewRouter()
+	)
 	registerAPI(router)
 
-	router.HandleFunc(
-		fmt.Sprintf("/{file:(?:%s)}", strings.Join(assets, "|")),
-		func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Cache-Control", "no-cache")
-			http.ServeFile(w, r, path.Join(cfg.AssetDir, mux.Vars(r)["file"]))
-		},
-	)
+	router.PathPrefix("/public").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache")
+		assetServer.ServeHTTP(w, r)
+	})
 
 	go func() {
 		if err := http.ListenAndServe(cfg.Listen, router); err != nil {
@@ -105,7 +95,7 @@ func main() {
 	for {
 		select {
 		case <-timerAssetCheck.C:
-			if err := updateAssetHashes(); err != nil {
+			if err := assetVersions.UpdateAssetHashes(cfg.AssetDir); err != nil {
 				log.WithError(err).Error("Unable to update asset hashes")
 			}
 
@@ -126,26 +116,4 @@ func main() {
 
 		}
 	}
-}
-
-func updateAssetHashes() error {
-	assetVersionsLock.Lock()
-	defer assetVersionsLock.Unlock()
-
-	for _, asset := range assets {
-		hash := sha256.New()
-		f, err := os.Open(asset)
-		if err != nil {
-			return errors.Wrap(err, "open asset file")
-		}
-		defer f.Close()
-
-		if _, err = io.Copy(hash, f); err != nil {
-			return errors.Wrap(err, "read asset file")
-		}
-
-		assetVersions[asset] = fmt.Sprintf("%x", hash.Sum(nil))
-	}
-
-	return nil
 }

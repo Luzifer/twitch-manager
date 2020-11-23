@@ -66,12 +66,9 @@ func (s *subcriptionStore) UnsubscribeSocket(id string) {
 }
 
 func compileSocketMessage(msgType string, msg interface{}) socketMessage {
-	assetVersionsLock.RLock()
-	defer assetVersionsLock.RUnlock()
-
 	versionParts := []string{version}
-	for _, asset := range assets {
-		versionParts = append(versionParts, assetVersions[asset])
+	for _, asset := range assetVersions.Keys() {
+		versionParts = append(versionParts, assetVersions.Get(asset))
 	}
 
 	hash := sha256.New()
