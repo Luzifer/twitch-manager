@@ -92,8 +92,23 @@ var upgrader = websocket.Upgrader{
 }
 
 func registerAPI(r *mux.Router) {
+	r.HandleFunc("/api/follows/clear-last", handleClearLastFollower)
 	r.HandleFunc("/api/subscribe", handleUpdateSocket)
 	r.HandleFunc("/api/webhook/{type}", handleWebHookPush)
+}
+
+func handleClearLastFollower(w http.ResponseWriter, r *http.Request) {
+	store.Followers.Last = nil
+
+	if err := store.Save(cfg.StoreFile); err != nil {
+		log.WithError(err).Error("Unable to update persistent store")
+	}
+
+	if err := subscriptions.SendAllSockets(msgTypeStore, store); err != nil {
+		log.WithError(err).Error("Unable to send update to all sockets")
+	}
+
+	w.WriteHeader(http.StatusAccepted)
 }
 
 func handleUpdateSocket(w http.ResponseWriter, r *http.Request) {
