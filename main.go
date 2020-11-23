@@ -16,7 +16,7 @@ import (
 var (
 	cfg = struct {
 		AssetCheckInterval    time.Duration `flag:"asset-check-interval" default:"1m" description:"How often to check asset files for updates"`
-		AssetDir              string        `flag:"asset-dir" default:"." description:"Directory containing assets"`
+		AssetDir              string        `flag:"asset-dir" default:"./public" description:"Directory containing assets"`
 		BaseURL               string        `flag:"base-url" default:"" description:"Base URL of this service" validate:"nonzero"`
 		ForceSyncInterval     time.Duration `flag:"force-sync-interval" default:"1m" description:"How often to force a sync without updates"`
 		Listen                string        `flag:"listen" default:":3000" description:"Port/IP to listen on"`
@@ -65,7 +65,7 @@ func main() {
 	}
 
 	var (
-		assetServer = http.FileServer(http.Dir(cfg.AssetDir))
+		assetServer = http.StripPrefix("/public", http.FileServer(http.Dir(cfg.AssetDir)))
 		router      = mux.NewRouter()
 	)
 	registerAPI(router)
