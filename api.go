@@ -99,9 +99,10 @@ func registerAPI(r *mux.Router) {
 
 func handleCustomAlert(w http.ResponseWriter, r *http.Request) {
 	var alert struct {
-		Sound *string `json:"sound"`
-		Text  string  `json:"text"`
-		Title string  `json:"title"`
+		Sound   *string `json:"sound"`
+		Text    string  `json:"text"`
+		Title   string  `json:"title"`
+		Variant *string `json:"variant"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&alert); err != nil {
