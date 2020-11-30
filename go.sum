@@ -5,6 +5,9 @@ github.com/Luzifer/rconfig v1.2.0 h1:waD1sqasGVSQSrExpLrQ9Q1JmMaltrS391VdOjWXP/I
 github.com/Luzifer/rconfig/v2 v2.2.1 h1:zcDdLQlnlzwcBJ8E0WFzOkQE1pCMn3EbX0dFYkeTczg=
 github.com/Luzifer/rconfig/v2 v2.2.1/go.mod h1:OKIX0/JRZrPJ/ZXXWklQEFXA6tBfWaljZbW37w+sqBw=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/go-irc/irc v1.3.0 h1:IMD+d/+EzY51ecMLOz73r/NXTZrEp8khrePxRCvX71M=
+github.com/go-irc/irc v2.1.0+incompatible h1:pg7pMVq5OYQbqTxceByD/EN8VIsba7DtKn49rsCnG8Y=
+github.com/go-irc/irc v2.1.0+incompatible/go.mod h1:jJILTRy8s/qOvusiKifAEfhQMVwft1ZwQaVJnnzmyX4=
 github.com/gofrs/uuid v1.2.0 h1:coDhrjgyJaglxSjxuJdqQSSdUpG3w6p1OwN2od6frBU=
 github.com/gofrs/uuid v3.3.0+incompatible h1:8K4tyRfvU1CYPgJsveYFQMhpFd/wXNM7iK6rR7UHz84=
 github.com/gofrs/uuid v3.3.0+incompatible/go.mod h1:b2aQJv3Z4Fp6yNu3cdSllBxTCLRxnplIgP/c0N/04lM=

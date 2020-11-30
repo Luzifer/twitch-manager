@@ -55,12 +55,14 @@ func init() {
 }
 
 func main() {
+	var err error
+
 	store = newStorage()
 	if err := store.Load(cfg.StoreFile); err != nil && !os.IsNotExist(err) {
 		log.WithError(err).Fatal("Unable to load store")
 	}
 
-	if err := assetVersions.UpdateAssetHashes(cfg.AssetDir); err != nil {
+	if err = assetVersions.UpdateAssetHashes(cfg.AssetDir); err != nil {
 		log.WithError(err).Fatal("Unable to read asset hashes")
 	}
 
@@ -81,19 +83,41 @@ func main() {
 		}
 	}()
 
-	if err := registerWebHooks(); err != nil {
+	if err = registerWebHooks(); err != nil {
 		log.WithError(err).Fatal("Unable to register webhooks")
 	}
 
 	var (
+		irc             *ircHandler
+		ircDisconnected = make(chan struct{}, 1)
+
 		timerAssetCheck      = time.NewTicker(cfg.AssetCheckInterval)
 		timerForceSync       = time.NewTicker(cfg.ForceSyncInterval)
 		timerUpdateFromAPI   = time.NewTicker(cfg.UpdateFromAPIInterval)
 		timerWebhookRegister = time.NewTicker(cfg.WebHookTimeout)
 	)
 
+	ircDisconnected <- struct{}{}
+
 	for {
 		select {
+		case <-ircDisconnected:
+			if irc != nil {
+				irc.Close()
+			}
+
+			if irc, err = newIRCHandler(); err != nil {
+				log.WithError(err).Fatal("Unable to create IRC client")
+			}
+
+			go func() {
+				if err := irc.Run(); err != nil {
+					log.WithError(err).Error("IRC run exited unexpectedly")
+				}
+				time.Sleep(100 * time.Millisecond)
+				ircDisconnected <- struct{}{}
+			}()
+
 		case <-timerAssetCheck.C:
 			if err := assetVersions.UpdateAssetHashes(cfg.AssetDir); err != nil {
 				log.WithError(err).Error("Unable to update asset hashes")

@@ -91,6 +91,10 @@ const app = new Vue({
             }
             break
 
+          case 'raid':
+            this.showAlert('Incoming raid', `${data.payload.from} just raided with ${data.payload.viewerCount} raiders`)
+            break
+
           case 'store':
             this.store = data.payload
             window.setTimeout(() => { this.firstLoad = false }, 100) // Delayed to let the watches trigger

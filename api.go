@@ -17,7 +17,11 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const msgTypeStore string = "store"
+const (
+	msgTypeHost  string = "host"
+	msgTypeRaid  string = "raid"
+	msgTypeStore string = "store"
+)
 
 var subscriptions = newSubscriptionStore()
 

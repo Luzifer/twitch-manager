@@ -5,6 +5,7 @@ go 1.15
 require (
 	github.com/Luzifer/go_helpers/v2 v2.11.0
 	github.com/Luzifer/rconfig/v2 v2.2.1
+	github.com/go-irc/irc v2.1.0+incompatible
 	github.com/gofrs/uuid v3.3.0+incompatible
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
