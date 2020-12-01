@@ -6,12 +6,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/go-irc/irc"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
+
+var regexpHostNotification = regexp.MustCompile(`^(?P<actor>\w+) is now(?: auto)? hosting you(?: for (?P<amount>[0-9]+) viewers)?.$`)
 
 type ircHandler struct {
 	conn *tls.Conn
@@ -51,25 +54,26 @@ func (i ircHandler) Handle(c *irc.Client, m *irc.Message) {
 	switch m.Command {
 	case "001":
 		// 001 is a welcome event, so we join channels there
-		for _, capreq := range []string{
-			"twitch.tv/membership",
-			"twitch.tv/tags",
-			"twitch.tv/commands",
-		} {
-			c.WriteMessage(&irc.Message{
-				Command: "CAP",
-				Params: []string{
-					"REQ",
-					capreq,
-				},
-			})
-		}
+		c.WriteMessage(&irc.Message{
+			Command: "CAP",
+			Params: []string{
+				"REQ",
+				strings.Join([]string{
+					"twitch.tv/commands",
+					"twitch.tv/membership",
+					"twitch.tv/tags",
+				}, " "),
+			},
+		})
 		c.Write(fmt.Sprintf("JOIN #%s", i.user))
 
 	case "NOTICE":
 		// NOTICE (Twitch Commands)
 		// General notices from the server.
 		i.handleTwitchNotice(m)
+
+	case "PRIVMSG":
+		i.handleTwitchPrivmsg(m)
 
 	case "RECONNECT":
 		// RECONNECT (Twitch Commands)
@@ -82,6 +86,11 @@ func (i ircHandler) Handle(c *irc.Client, m *irc.Message) {
 		i.handleTwitchUsernotice(m)
 
 	default:
+		log.WithFields(log.Fields{
+			"command":  m.Command,
+			"tags":     m.Tags,
+			"trailing": m.Trailing(),
+		}).Trace("Unhandled message")
 		// Unhandled message type, not yet needed
 	}
 }
@@ -142,8 +151,31 @@ func (ircHandler) handleTwitchNotice(m *irc.Message) {
 	case "host_success", "host_success_viewers":
 		log.WithField("trailing", m.Trailing()).Warn("Incoming host")
 
-		// FIXME: Doesn't work? Need to figure out why, host had no notice
+		// NOTE: Doesn't work? Need to figure out why, host had no notice
+		// This used to work at some time... Maybe? Dunno. Didn't get that to work.
 
+	}
+}
+
+func (ircHandler) handleTwitchPrivmsg(m *irc.Message) {
+	log.WithFields(log.Fields{
+		"name":     m.Name,
+		"user":     m.User,
+		"tags":     m.Tags,
+		"trailing": m.Trailing(),
+	}).Trace("Received privmsg")
+
+	// Handle the jtv host message for hosts
+	if m.User == "jtv" && regexpHostNotification.MatchString(m.Trailing()) {
+		matches := regexpHostNotification.FindStringSubmatch(m.Trailing())
+		if matches[2] == "" {
+			matches[2] = "0"
+		}
+
+		subscriptions.SendAllSockets(msgTypeHost, map[string]interface{}{
+			"from":        matches[1],
+			"viewerCount": matches[2],
+		})
 	}
 }
 
