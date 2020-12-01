@@ -91,6 +91,10 @@ const app = new Vue({
             }
             break
 
+          case 'host':
+            this.showAlert('Incoming host', `${data.payload.from} just hosted`)
+            break
+
           case 'raid':
             this.showAlert('Incoming raid', `${data.payload.from} just raided with ${data.payload.viewerCount} raiders`)
             break
