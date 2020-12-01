@@ -197,7 +197,7 @@ func (ircHandler) handleTwitchUsernotice(m *irc.Message) {
 		}).Info("Incoming raid")
 
 		subscriptions.SendAllSockets(msgTypeRaid, map[string]interface{}{
-			"from":        m.Tags["login"],
+			"from":        m.Tags["msg-param-displayName"],
 			"viewerCount": m.Tags["msg-param-viewerCount"],
 		})
 
