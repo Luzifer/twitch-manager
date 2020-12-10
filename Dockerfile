@@ -13,6 +13,9 @@ FROM alpine:latest
 
 LABEL maintainer "Knut Ahlers <knut@ahlers.me>"
 
+ENV ASSET_DIR=/data/public \
+    STORE_FILE=/data/store.json.gz
+
 RUN set -ex \
  && apk --no-cache add \
       ca-certificates
