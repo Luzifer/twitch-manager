@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -59,6 +60,11 @@ func (a *assetVersionStore) UpdateAssetHashes(dir string) error {
 
 		if info.IsDir() {
 			// We can't hash directories
+			return nil
+		}
+
+		if strings.Contains(path, ".git/") {
+			// We shouldn't include .git dir in hashes
 			return nil
 		}
 

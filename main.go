@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gofrs/uuid"
@@ -73,6 +74,12 @@ func main() {
 	registerAPI(router)
 
 	router.PathPrefix("/public").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.RequestURI, "/.git/") {
+			// Prevent git dir to be exposed
+			http.NotFound(w, r)
+			return
+		}
+
 		w.Header().Set("Cache-Control", "no-cache")
 		assetServer.ServeHTTP(w, r)
 	})
