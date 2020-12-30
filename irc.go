@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/go-irc/irc"
@@ -185,24 +186,96 @@ func (ircHandler) handleTwitchUsernotice(m *irc.Message) {
 		"trailing": m.Trailing,
 	}).Debug("IRC USERNOTICE event")
 
+	displayName, ok := m.Tags["msg-param-displayName"]
+	if !ok {
+		displayName = m.Tags["login"]
+	}
+
 	switch m.Tags["msg-id"] {
 	case "":
 		// Notices SHOULD have msg-id tags...
 		log.WithField("msg", m).Warn("Received usernotice without msg-id")
 
 	case "raid":
-		log.WithFields(log.Fields{
-			"from":        m.Tags["login"],
-			"viewercount": m.Tags["msg-param-viewerCount"],
-		}).Info("Incoming raid")
-
-		subscriptions.SendAllSockets(msgTypeRaid, map[string]interface{}{
-			"from":        m.Tags["msg-param-displayName"],
+		fields := map[string]interface{}{
+			"from":        displayName,
 			"viewerCount": m.Tags["msg-param-viewerCount"],
-		})
+		}
 
-	case "resub":
-		// FIXME: Fill in later
+		log.WithFields(log.Fields(fields)).Info("Incoming raid")
+		subscriptions.SendAllSockets(msgTypeRaid, fields)
+
+	case "sub", "resub":
+		fields := map[string]interface{}{
+			"from":     displayName,
+			"is_resub": m.Tags["msg-id"] == "resub",
+			"paid_for": m.Tags["msg-param-multimonth-duration"],
+			"streak":   m.Tags["msg-param-streak-months"],
+			"tier":     m.Tags["msg-param-sub-plan"],
+			"total":    m.Tags["msg-param-cumulative-months"],
+		}
+
+		// Update store
+		strDisplayName := string(displayName)
+		var duration int64
+		if v, err := strconv.ParseInt(string(m.Tags["msg-param-cumulative-months"]), 10, 64); err == nil {
+			duration = v
+		}
+
+		store.Subs.Last = &strDisplayName
+		store.Subs.LastDuration = duration
+
+		// Send update to sockets
+		log.WithFields(log.Fields(fields)).Info("New subscriber")
+		subscriptions.SendAllSockets(msgTypeSub, fields)
+
+		// Execute store save
+		if err := store.Save(cfg.StoreFile); err != nil {
+			log.WithError(err).Error("Unable to update persistent store")
+		}
+
+		if err := subscriptions.SendAllSockets(msgTypeStore, store); err != nil {
+			log.WithError(err).Error("Unable to send update to all sockets")
+		}
+
+	case "subgift", "anonsubgift":
+		toName, ok := m.Tags["msg-param-recipient-display-name"]
+		if !ok {
+			toName = m.Tags["msg-param-recipient-user-name"]
+		}
+
+		fields := map[string]interface{}{
+			"from":     displayName,
+			"is_anon":  m.Tags["msg-id"] == "anonsubgift",
+			"gift_to":  toName,
+			"paid_for": m.Tags["msg-param-gift-months"],
+			"streak":   m.Tags["msg-param-streak-months"],
+			"tier":     m.Tags["msg-param-sub-plan"],
+			"total":    m.Tags["msg-param-months"],
+		}
+
+		// Update store
+		strDisplayName := string(displayName)
+		var duration int64
+		if v, err := strconv.ParseInt(string(m.Tags["msg-param-months"]), 10, 64); err == nil {
+			duration = v
+		}
+
+		store.Subs.Last = &strDisplayName
+		store.Subs.LastDuration = duration
+
+		// Send update to sockets
+		log.WithFields(log.Fields(fields)).Info("New sub-gift")
+		subscriptions.SendAllSockets(msgTypeSub, fields)
+
+		// Execute store save
+		if err := store.Save(cfg.StoreFile); err != nil {
+			log.WithError(err).Error("Unable to update persistent store")
+		}
+
+		if err := subscriptions.SendAllSockets(msgTypeStore, store); err != nil {
+			log.WithError(err).Error("Unable to send update to all sockets")
+		}
 
 	}
 }

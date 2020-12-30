@@ -21,6 +21,7 @@ const (
 	msgTypeHost  string = "host"
 	msgTypeRaid  string = "raid"
 	msgTypeStore string = "store"
+	msgTypeSub   string = "sub"
 )
 
 var subscriptions = newSubscriptionStore()
