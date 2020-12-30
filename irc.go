@@ -222,8 +222,16 @@ func (ircHandler) handleTwitchUsernotice(m *irc.Message) {
 			duration = v
 		}
 
-		store.Subs.Last = &strDisplayName
-		store.Subs.LastDuration = duration
+		store.WithModLock(func() error {
+			store.Subs.Last = &strDisplayName
+			store.Subs.LastDuration = duration
+			store.Subs.Recent = append([]subscriber{{
+				Name:   strDisplayName,
+				Months: duration,
+			}}, store.Subs.Recent...)
+
+			return nil
+		})
 
 		// Send update to sockets
 		log.WithFields(log.Fields(fields)).Info("New subscriber")
@@ -234,7 +242,7 @@ func (ircHandler) handleTwitchUsernotice(m *irc.Message) {
 			log.WithError(err).Error("Unable to update persistent store")
 		}
 
-		if err := subscriptions.SendAllSockets(msgTypeStore, store); err != nil {
+		if err := store.WithModRLock(func() error { return subscriptions.SendAllSockets(msgTypeStore, store) }); err != nil {
 			log.WithError(err).Error("Unable to send update to all sockets")
 		}
 
@@ -255,25 +263,33 @@ func (ircHandler) handleTwitchUsernotice(m *irc.Message) {
 		}
 
 		// Update store
-		strDisplayName := string(displayName)
+		strDisplayName := string(toName)
 		var duration int64
 		if v, err := strconv.ParseInt(string(m.Tags["msg-param-months"]), 10, 64); err == nil {
 			duration = v
 		}
 
-		store.Subs.Last = &strDisplayName
-		store.Subs.LastDuration = duration
+		store.WithModLock(func() error {
+			store.Subs.Last = &strDisplayName
+			store.Subs.LastDuration = duration
+			store.Subs.Recent = append([]subscriber{{
+				Name:   strDisplayName,
+				Months: duration,
+			}}, store.Subs.Recent...)
+
+			return nil
+		})
 
 		// Send update to sockets
 		log.WithFields(log.Fields(fields)).Info("New sub-gift")
-		subscriptions.SendAllSockets(msgTypeSub, fields)
+		subscriptions.SendAllSockets(msgTypeSubGift, fields)
 
 		// Execute store save
 		if err := store.Save(cfg.StoreFile); err != nil {
 			log.WithError(err).Error("Unable to update persistent store")
 		}
 
-		if err := subscriptions.SendAllSockets(msgTypeStore, store); err != nil {
+		if err := store.WithModRLock(func() error { return subscriptions.SendAllSockets(msgTypeStore, store) }); err != nil {
 			log.WithError(err).Error("Unable to send update to all sockets")
 		}
 

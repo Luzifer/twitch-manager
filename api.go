@@ -18,10 +18,11 @@ import (
 )
 
 const (
-	msgTypeHost  string = "host"
-	msgTypeRaid  string = "raid"
-	msgTypeStore string = "store"
-	msgTypeSub   string = "sub"
+	msgTypeHost    string = "host"
+	msgTypeRaid    string = "raid"
+	msgTypeStore   string = "store"
+	msgTypeSub     string = "sub"
+	msgTypeSubGift string = "subgift"
 )
 
 var subscriptions = newSubscriptionStore()

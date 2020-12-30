@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/pkg/errors"
@@ -16,6 +17,8 @@ func updateStats() error {
 	log.Debug("Updating statistics from API")
 	for _, fn := range []func() error{
 		updateFollowers,
+		updateSubscriberCount,
+		func() error { return subscriptions.SendAllSockets(msgTypeStore, store) },
 	} {
 		if err := fn(); err != nil {
 			return errors.Wrap(err, "update statistics module")
@@ -69,15 +72,86 @@ func updateFollowers() error {
 		seen = append(seen, f.FromName)
 	}
 
-	store.Followers.Count = payload.Total
-	store.Followers.Seen = seen
+	store.WithModLock(func() error {
+		store.Followers.Count = payload.Total
+		store.Followers.Seen = seen
 
-	if err = store.Save(cfg.StoreFile); err != nil {
-		return errors.Wrap(err, "save store")
+		return nil
+	})
+
+	return errors.Wrap(store.Save(cfg.StoreFile), "save store")
+}
+
+func updateSubscriberCount() error {
+	log.Debug("Updating subscriber count from API")
+
+	var (
+		params   = url.Values{"broadcaster_id": []string{cfg.TwitchID}}
+		subCount int64
+	)
+
+	for {
+		ctx, cancel := context.WithTimeout(context.Background(), twitchRequestTimeout)
+		defer cancel()
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("https://api.twitch.tv/helix/subscriptions?%s", params.Encode()), nil)
+		if err != nil {
+			return errors.Wrap(err, "assemble subscriber request")
+		}
+		req.Header.Set("Client-Id", cfg.TwitchClient)
+		req.Header.Set("Authorization", "Bearer "+cfg.TwitchToken)
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return errors.Wrap(err, "requesting subscribe")
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return errors.Wrapf(err, "unexpected status %d, unable to read body", resp.StatusCode)
+			}
+			return errors.Errorf("unexpected status %d: %s", resp.StatusCode, body)
+		}
+
+		payload := struct {
+			Pagination struct {
+				Cursor string `json:"cursor"`
+			} `json:"pagination"`
+			Data []struct {
+				BroadcasterID string `json:"broadcaster_id"`
+				Tier          string `json:"tier"`
+				UserID        string `json:"user_id"`
+			} `json:"data"`
+			// Contains more but I don't care.
+		}{}
+
+		if err = json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+			return errors.Wrap(err, "decode json response")
+		}
+
+		if len(payload.Data) == 0 {
+			break
+		}
+
+		for _, sub := range payload.Data {
+			if sub.UserID == sub.BroadcasterID {
+				// Don't count self
+				continue
+			}
+
+			subCount++
+		}
+
+		params.Set("after", payload.Pagination.Cursor)
 	}
 
-	return errors.Wrap(
-		subscriptions.SendAllSockets(msgTypeStore, store),
-		"update all sockets",
-	)
+	store.WithModLock(func() error {
+		store.Subs.Count = subCount
+
+		return nil
+	})
+
+	return errors.Wrap(store.Save(cfg.StoreFile), "save store")
 }

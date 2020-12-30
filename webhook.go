@@ -78,15 +78,26 @@ func handleWebHookPush(w http.ResponseWriter, r *http.Request) {
 
 		sort.Slice(payload.Data, func(i, j int) bool { return payload.Data[i].FollowedAt.Before(payload.Data[j].FollowedAt) })
 		for _, f := range payload.Data {
-			if str.StringInSlice(f.FromName, store.Followers.Seen) {
+			var isKnown bool
+
+			store.WithModRLock(func() error {
+				isKnown = str.StringInSlice(f.FromName, store.Followers.Seen)
+				return nil
+			})
+
+			if isKnown {
 				logger.WithField("name", f.FromName).Debug("New follower already known, skipping")
 				continue
 			}
 
 			logger.WithField("name", f.FromName).Info("New follower announced")
-			store.Followers.Last = &f.FromName
-			store.Followers.Count++
-			store.Followers.Seen = append([]string{f.FromName}, store.Followers.Seen...)
+			store.WithModLock(func() error {
+				store.Followers.Last = &f.FromName
+				store.Followers.Count++
+				store.Followers.Seen = append([]string{f.FromName}, store.Followers.Seen...)
+
+				return nil
+			})
 		}
 
 	default:
@@ -98,7 +109,7 @@ func handleWebHookPush(w http.ResponseWriter, r *http.Request) {
 		logger.WithError(err).Error("Unable to update persistent store")
 	}
 
-	if err := subscriptions.SendAllSockets(msgTypeStore, store); err != nil {
+	if err := store.WithModRLock(func() error { return subscriptions.SendAllSockets(msgTypeStore, store) }); err != nil {
 		logger.WithError(err).Error("Unable to send update to all sockets")
 	}
 }

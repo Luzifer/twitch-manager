@@ -9,7 +9,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-const storeMaxFollowers = 25
+const storeMaxRecent = 25
+
+type subscriber struct {
+	Name   string `json:"name"`
+	Months int64  `json:"months"`
+}
 
 type storage struct {
 	Donations struct {
@@ -23,11 +28,13 @@ type storage struct {
 		Count int64    `json:"count"`
 	} `json:"followers"`
 	Subs struct {
-		Last         *string `json:"last"`
-		LastDuration int64   `json:"last_duration"`
-		Count        int64   `json:"count"`
+		Last         *string      `json:"last"`
+		LastDuration int64        `json:"last_duration"`
+		Count        int64        `json:"count"`
+		Recent       []subscriber `json:"recent"`
 	} `json:"subs"`
 
+	modLock  sync.RWMutex
 	saveLock sync.Mutex
 }
 
@@ -56,11 +63,18 @@ func (s *storage) Load(from string) error {
 }
 
 func (s *storage) Save(to string) error {
+	s.modLock.RLock()
+	defer s.modLock.RUnlock()
+
 	s.saveLock.Lock()
 	defer s.saveLock.Unlock()
 
-	if len(s.Followers.Seen) > storeMaxFollowers {
-		s.Followers.Seen = s.Followers.Seen[:storeMaxFollowers]
+	if len(s.Followers.Seen) > storeMaxRecent {
+		s.Followers.Seen = s.Followers.Seen[:storeMaxRecent]
+	}
+
+	if len(s.Subs.Recent) > storeMaxRecent {
+		s.Subs.Recent = s.Subs.Recent[:storeMaxRecent]
 	}
 
 	f, err := os.Create(to)
@@ -76,4 +90,18 @@ func (s *storage) Save(to string) error {
 		json.NewEncoder(gf).Encode(s),
 		"encode json",
 	)
+}
+
+func (s *storage) WithModLock(fn func() error) error {
+	s.modLock.Lock()
+	defer s.modLock.Unlock()
+
+	return fn()
+}
+
+func (s *storage) WithModRLock(fn func() error) error {
+	s.modLock.RLock()
+	defer s.modLock.RUnlock()
+
+	return fn()
 }
