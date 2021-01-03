@@ -18,6 +18,7 @@ import (
 )
 
 const (
+	msgTypeBits    string = "bits"
 	msgTypeHost    string = "host"
 	msgTypeRaid    string = "raid"
 	msgTypeStore   string = "store"

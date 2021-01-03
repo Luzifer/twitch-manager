@@ -178,6 +178,52 @@ func (ircHandler) handleTwitchPrivmsg(m *irc.Message) {
 			"viewerCount": matches[2],
 		})
 	}
+
+	// Handle bit-messages
+	if bitString, ok := m.Tags["bits"]; ok && bitString != "" {
+		bitAmount, err := strconv.ParseInt(string(bitString), 10, 64)
+		if err != nil {
+			log.WithError(err).Error("Unable to parse bit-string")
+			return
+		}
+
+		displayName, ok := m.Tags["msg-param-displayName"]
+		if !ok {
+			displayName = irc.TagValue(m.User)
+		}
+		strDisplayName := string(displayName)
+
+		fields := map[string]interface{}{
+			"from":   displayName,
+			"amount": bitAmount,
+		}
+
+		store.WithModLock(func() error {
+			store.BitDonations.LastDonator = &strDisplayName
+			store.BitDonations.LastAmount = bitAmount
+			if store.BitDonations.TotalAmounts == nil {
+				store.BitDonations.TotalAmounts = map[string]int64{}
+			}
+			store.BitDonations.TotalAmounts[m.User] += bitAmount
+
+			fields["total_amount"] = store.BitDonations.TotalAmounts[m.User]
+
+			return nil
+		})
+
+		// Send update to sockets
+		log.WithFields(log.Fields(fields)).Info("Bit donation")
+		subscriptions.SendAllSockets(msgTypeBits, fields)
+
+		// Execute store save
+		if err := store.Save(cfg.StoreFile); err != nil {
+			log.WithError(err).Error("Unable to update persistent store")
+		}
+
+		if err := store.WithModRLock(func() error { return subscriptions.SendAllSockets(msgTypeStore, store) }); err != nil {
+			log.WithError(err).Error("Unable to send update to all sockets")
+		}
+	}
 }
 
 func (ircHandler) handleTwitchUsernotice(m *irc.Message) {

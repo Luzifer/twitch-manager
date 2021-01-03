@@ -17,6 +17,11 @@ type subscriber struct {
 }
 
 type storage struct {
+	BitDonations struct {
+		LastDonator  *string          `json:"last_donator"`
+		LastAmount   int64            `json:"last_amount"`
+		TotalAmounts map[string]int64 `json:"total_amounts"`
+	} `json:"bit_donations"`
 	Donations struct {
 		LastDonator *string `json:"last_donator"`
 		LastAmount  float64 `json:"last_amount"`
