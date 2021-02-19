@@ -18,6 +18,7 @@ import (
 )
 
 const (
+	msgTypeAlert   string = "alert"
 	msgTypeBits    string = "bits"
 	msgTypeHost    string = "host"
 	msgTypeRaid    string = "raid"
@@ -122,7 +123,7 @@ func handleCustomAlert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := subscriptions.SendAllSockets("alert", alert); err != nil {
+	if err := subscriptions.SendAllSockets(msgTypeAlert, alert); err != nil {
 		http.Error(w, errors.Wrap(err, "send to sockets").Error(), http.StatusInternalServerError)
 		return
 	}
