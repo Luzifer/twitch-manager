@@ -20,6 +20,7 @@ import (
 const (
 	msgTypeAlert   string = "alert"
 	msgTypeBits    string = "bits"
+	msgTypeCustom  string = "custom"
 	msgTypeHost    string = "host"
 	msgTypeRaid    string = "raid"
 	msgTypeStore   string = "store"
@@ -99,6 +100,7 @@ var upgrader = websocket.Upgrader{
 
 func registerAPI(r *mux.Router) {
 	r.HandleFunc("/api/custom-alert", handleCustomAlert).Methods(http.MethodPost)
+	r.HandleFunc("/api/custom-event", handleCustomEvent).Methods(http.MethodPost)
 	r.HandleFunc("/api/follows/clear-last", handleSetLastFollower).Methods(http.MethodPut)
 	r.HandleFunc("/api/follows/set-last/{name}", handleSetLastFollower).Methods(http.MethodPut)
 	r.HandleFunc("/api/subscribe", handleUpdateSocket).Methods(http.MethodGet)
@@ -124,6 +126,24 @@ func handleCustomAlert(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := subscriptions.SendAllSockets(msgTypeAlert, alert); err != nil {
+		http.Error(w, errors.Wrap(err, "send to sockets").Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+}
+
+func handleCustomEvent(w http.ResponseWriter, r *http.Request) {
+	var event struct {
+		Data string `json:"data"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+		http.Error(w, errors.Wrap(err, "parse request body").Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := subscriptions.SendAllSockets(msgTypeCustom, event); err != nil {
 		http.Error(w, errors.Wrap(err, "send to sockets").Error(), http.StatusInternalServerError)
 		return
 	}
