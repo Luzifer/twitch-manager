@@ -101,6 +101,7 @@ var upgrader = websocket.Upgrader{
 func registerAPI(r *mux.Router) {
 	r.HandleFunc("/api/custom-alert", handleCustomAlert).Methods(http.MethodPost)
 	r.HandleFunc("/api/custom-event", handleCustomEvent).Methods(http.MethodPost)
+	r.HandleFunc("/api/demo/{event}", handleDemoAlert).Methods(http.MethodPut)
 	r.HandleFunc("/api/follows/clear-last", handleSetLastFollower).Methods(http.MethodPut)
 	r.HandleFunc("/api/follows/set-last/{name}", handleSetLastFollower).Methods(http.MethodPut)
 	r.HandleFunc("/api/subscribe", handleUpdateSocket).Methods(http.MethodGet)
