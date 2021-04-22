@@ -90,6 +90,15 @@ func handleWebHookPush(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 
+			fields := map[string]interface{}{
+				"from":        f.FromName,
+				"followed_at": f.FollowedAt,
+			}
+
+			if err := subscriptions.SendAllSockets(msgTypeFollow, fields); err != nil {
+				log.WithError(err).Error("Unable to send update to all sockets")
+			}
+
 			logger.WithField("name", f.FromName).Info("New follower announced")
 			store.WithModLock(func() error {
 				store.Followers.Last = &f.FromName

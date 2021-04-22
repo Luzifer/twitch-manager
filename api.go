@@ -21,6 +21,7 @@ const (
 	msgTypeAlert   string = "alert"
 	msgTypeBits    string = "bits"
 	msgTypeCustom  string = "custom"
+	msgTypeFollow  string = "follow"
 	msgTypeHost    string = "host"
 	msgTypeRaid    string = "raid"
 	msgTypeStore   string = "store"

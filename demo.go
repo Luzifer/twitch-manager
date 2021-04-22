@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -22,6 +23,12 @@ func handleDemoAlert(w http.ResponseWriter, r *http.Request) {
 			"from":         demoIssuer,
 			"amount":       5,
 			"total_amount": 1337,
+		}
+
+	case msgTypeFollow:
+		data = map[string]interface{}{
+			"from":        demoIssuer,
+			"followed_at": time.Now(),
 		}
 
 	case msgTypeHost:
