@@ -54,7 +54,7 @@ func handleWebHookPush(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mac := hmac.New(sha256.New, []byte(webhookSecret))
+	mac := hmac.New(sha256.New, []byte(cfg.WebHookSecret))
 	mac.Write(body.Bytes())
 	if cSig := fmt.Sprintf("sha256=%x", mac.Sum(nil)); cSig != signature {
 		log.Errorf("Got message signature %s, expected %s", signature, cSig)
@@ -173,7 +173,7 @@ func registerWebHooks() error {
 			"hub.mode":          "subscribe",
 			"hub.topic":         topic,
 			"hub.lease_seconds": int64((cfg.WebHookTimeout + twitchRequestTimeout) / time.Second),
-			"hub.secret":        webhookSecret,
+			"hub.secret":        cfg.WebHookSecret,
 		}); err != nil {
 			return errors.Wrap(err, "assemble subscribe payload")
 		}

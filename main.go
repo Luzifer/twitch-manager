@@ -28,11 +28,11 @@ var (
 		TwitchToken           string        `flag:"twitch-token" default:"" description:"OAuth token valid for client"`
 		UpdateFromAPIInterval time.Duration `flag:"update-from-api-interval" default:"10m" description:"How often to ask the API for real values"`
 		VersionAndExit        bool          `flag:"version" default:"false" description:"Prints current version and exits"`
+		WebHookSecret         string        `flag:"webhook-secret" default:"" description:"Secret to use for HMAC hashing of webhook payload"`
 		WebHookTimeout        time.Duration `flag:"webhook-timeout" default:"15m" description:"When to re-register the webhooks"`
 	}{}
 
-	store         *storage
-	webhookSecret = uuid.Must(uuid.NewV4()).String()
+	store *storage
 
 	version = "dev"
 )
@@ -52,6 +52,10 @@ func init() {
 		log.WithError(err).Fatal("Unable to parse log level")
 	} else {
 		log.SetLevel(l)
+	}
+
+	if cfg.WebHookSecret == "" {
+		cfg.WebHookSecret = uuid.Must(uuid.NewV4()).String()
 	}
 }
 
