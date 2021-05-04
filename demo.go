@@ -25,6 +25,13 @@ func handleDemoAlert(w http.ResponseWriter, r *http.Request) {
 			"total_amount": 1337,
 		}
 
+	case msgTypeDonation:
+		data = map[string]interface{}{
+			"name":    demoIssuer,
+			"amount":  6.66,
+			"message": "You rock!",
+		}
+
 	case msgTypeFollow:
 		data = map[string]interface{}{
 			"from":        demoIssuer,
