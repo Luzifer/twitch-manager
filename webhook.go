@@ -63,6 +63,35 @@ func handleWebHookPush(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch hookType {
+	case "donation":
+		var payload struct {
+			Name    string  `json:"name"`
+			Amount  float64 `json:"amount"`
+			Message string  `json:"message"`
+		}
+
+		if err := json.NewDecoder(body).Decode(&payload); err != nil {
+			logger.WithError(err).Error("Unable to decode payload")
+			return
+		}
+
+		fields := map[string]interface{}{
+			"name":    payload.Name,
+			"amount":  payload.Amount,
+			"message": payload.Message,
+		}
+
+		if err := subscriptions.SendAllSockets(msgTypeDonation, fields); err != nil {
+			log.WithError(err).Error("Unable to send update to all sockets")
+		}
+
+		store.WithModLock(func() error {
+			store.Donations.LastAmount = payload.Amount
+			store.Donations.LastDonator = &payload.Name
+
+			return nil
+		})
+
 	case "follow":
 		var payload struct {
 			Data []struct {

@@ -4,16 +4,24 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"os"
+	"sort"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 )
 
-const storeMaxRecent = 25
+const storeMaxRecent = 50
 
 type subscriber struct {
 	Name   string `json:"name"`
 	Months int64  `json:"months"`
+}
+
+type storedEvent struct {
+	Time    time.Time
+	Type    string
+	Message map[string]interface{}
 }
 
 type storage struct {
@@ -25,7 +33,6 @@ type storage struct {
 	Donations struct {
 		LastDonator *string `json:"last_donator"`
 		LastAmount  float64 `json:"last_amount"`
-		TotalAmount float64 `json:"total_amount"`
 	} `json:"donations"`
 	Followers struct {
 		Last  *string  `json:"last"`
@@ -38,6 +45,8 @@ type storage struct {
 		Count        int64        `json:"count"`
 		Recent       []subscriber `json:"recent"`
 	} `json:"subs"`
+
+	Events []storedEvent
 
 	modLock  sync.RWMutex
 	saveLock sync.Mutex
@@ -80,6 +89,11 @@ func (s *storage) Save(to string) error {
 
 	if len(s.Subs.Recent) > storeMaxRecent {
 		s.Subs.Recent = s.Subs.Recent[:storeMaxRecent]
+	}
+
+	sort.Slice(s.Events, func(j, i int) bool { return s.Events[i].Time.Before(s.Events[j].Time) })
+	if len(s.Events) > storeMaxRecent {
+		s.Events = s.Events[:storeMaxRecent]
 	}
 
 	f, err := os.Create(to)
