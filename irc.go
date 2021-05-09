@@ -176,7 +176,7 @@ func (ircHandler) handleTwitchPrivmsg(m *irc.Message) {
 		subscriptions.SendAllSockets(msgTypeHost, map[string]interface{}{
 			"from":        matches[1],
 			"viewerCount": matches[2],
-		})
+		}, false, true)
 	}
 
 	// Handle bit-messages
@@ -213,14 +213,14 @@ func (ircHandler) handleTwitchPrivmsg(m *irc.Message) {
 
 		// Send update to sockets
 		log.WithFields(log.Fields(fields)).Info("Bit donation")
-		subscriptions.SendAllSockets(msgTypeBits, fields)
+		subscriptions.SendAllSockets(msgTypeBits, fields, false, true)
 
 		// Execute store save
 		if err := store.Save(cfg.StoreFile); err != nil {
 			log.WithError(err).Error("Unable to update persistent store")
 		}
 
-		if err := store.WithModRLock(func() error { return subscriptions.SendAllSockets(msgTypeStore, store) }); err != nil {
+		if err := store.WithModRLock(func() error { return subscriptions.SendAllSockets(msgTypeStore, store, false, false) }); err != nil {
 			log.WithError(err).Error("Unable to send update to all sockets")
 		}
 	}
@@ -249,7 +249,7 @@ func (ircHandler) handleTwitchUsernotice(m *irc.Message) {
 		}
 
 		log.WithFields(log.Fields(fields)).Info("Incoming raid")
-		subscriptions.SendAllSockets(msgTypeRaid, fields)
+		subscriptions.SendAllSockets(msgTypeRaid, fields, false, true)
 
 	case "sub", "resub":
 		fields := map[string]interface{}{
@@ -281,14 +281,14 @@ func (ircHandler) handleTwitchUsernotice(m *irc.Message) {
 
 		// Send update to sockets
 		log.WithFields(log.Fields(fields)).Info("New subscriber")
-		subscriptions.SendAllSockets(msgTypeSub, fields)
+		subscriptions.SendAllSockets(msgTypeSub, fields, false, true)
 
 		// Execute store save
 		if err := store.Save(cfg.StoreFile); err != nil {
 			log.WithError(err).Error("Unable to update persistent store")
 		}
 
-		if err := store.WithModRLock(func() error { return subscriptions.SendAllSockets(msgTypeStore, store) }); err != nil {
+		if err := store.WithModRLock(func() error { return subscriptions.SendAllSockets(msgTypeStore, store, false, false) }); err != nil {
 			log.WithError(err).Error("Unable to send update to all sockets")
 		}
 
@@ -328,14 +328,14 @@ func (ircHandler) handleTwitchUsernotice(m *irc.Message) {
 
 		// Send update to sockets
 		log.WithFields(log.Fields(fields)).Info("New sub-gift")
-		subscriptions.SendAllSockets(msgTypeSubGift, fields)
+		subscriptions.SendAllSockets(msgTypeSubGift, fields, false, true)
 
 		// Execute store save
 		if err := store.Save(cfg.StoreFile); err != nil {
 			log.WithError(err).Error("Unable to update persistent store")
 		}
 
-		if err := store.WithModRLock(func() error { return subscriptions.SendAllSockets(msgTypeStore, store) }); err != nil {
+		if err := store.WithModRLock(func() error { return subscriptions.SendAllSockets(msgTypeStore, store, false, false) }); err != nil {
 			log.WithError(err).Error("Unable to send update to all sockets")
 		}
 

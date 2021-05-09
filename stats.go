@@ -18,7 +18,7 @@ func updateStats() error {
 	for _, fn := range []func() error{
 		updateFollowers,
 		updateSubscriberCount,
-		func() error { return subscriptions.SendAllSockets(msgTypeStore, store) },
+		func() error { return subscriptions.SendAllSockets(msgTypeStore, store, false, false) },
 	} {
 		if err := fn(); err != nil {
 			return errors.Wrap(err, "update statistics module")

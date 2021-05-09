@@ -28,12 +28,16 @@ const (
 	msgTypeStore    string = "store"
 	msgTypeSub      string = "sub"
 	msgTypeSubGift  string = "subgift"
+
+	msgTypeReplay string = "replay"
 )
 
 var subscriptions = newSubscriptionStore()
 
 type socketMessage struct {
 	Payload interface{} `json:"payload"`
+	Replay  bool        `json:"replay"`
+	Time    *time.Time  `json:"time,omitempty"`
 	Type    string      `json:"type"`
 	Version string      `json:"version"`
 }
@@ -50,17 +54,38 @@ func newSubscriptionStore() *subcriptionStore {
 	}
 }
 
-func (s subcriptionStore) SendAllSockets(msgType string, msg interface{}) error {
+func (s subcriptionStore) SendAllSockets(msgType string, msg interface{}, replay, storeEvent bool) error {
 	s.socketSubscriptionsLock.RLock()
 	defer s.socketSubscriptionsLock.RUnlock()
 
 	for _, hdl := range s.socketSubscriptions {
-		if err := hdl(compileSocketMessage(msgType, msg)); err != nil {
+		if err := hdl(compileSocketMessage(msgType, msg, replay, nil)); err != nil {
 			return errors.Wrap(err, "submit message")
 		}
 	}
 
-	return nil
+	if replay || !storeEvent {
+		return nil
+	}
+
+	if err := store.WithModLock(func() error {
+		data, err := json.Marshal(msg)
+		if err != nil {
+			return errors.Wrap(err, "marshalling message")
+		}
+
+		store.Events = append(store.Events, storedEvent{
+			Time:    time.Now(),
+			Type:    msgType,
+			Message: data,
+		})
+
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "storing event")
+	}
+
+	return errors.Wrap(store.Save(cfg.StoreFile), "saving store")
 }
 
 func (s *subcriptionStore) SubscribeSocket(id string, hdl func(socketMessage) error) {
@@ -77,7 +102,7 @@ func (s *subcriptionStore) UnsubscribeSocket(id string) {
 	delete(s.socketSubscriptions, id)
 }
 
-func compileSocketMessage(msgType string, msg interface{}) socketMessage {
+func compileSocketMessage(msgType string, msg interface{}, replay bool, overrideTime *time.Time) socketMessage {
 	versionParts := []string{version}
 	for _, asset := range assetVersions.Keys() {
 		versionParts = append(versionParts, assetVersions.Get(asset))
@@ -88,11 +113,18 @@ func compileSocketMessage(msgType string, msg interface{}) socketMessage {
 
 	ver := fmt.Sprintf("%x", hash.Sum(nil))
 
-	return socketMessage{
+	out := socketMessage{
 		Payload: msg,
+		Replay:  replay,
 		Type:    msgType,
 		Version: ver,
 	}
+
+	if overrideTime != nil {
+		out.Time = overrideTime
+	}
+
+	return out
 }
 
 var upgrader = websocket.Upgrader{
@@ -128,7 +160,7 @@ func handleCustomAlert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := subscriptions.SendAllSockets(msgTypeAlert, alert); err != nil {
+	if err := subscriptions.SendAllSockets(msgTypeAlert, alert, false, true); err != nil {
 		http.Error(w, errors.Wrap(err, "send to sockets").Error(), http.StatusInternalServerError)
 		return
 	}
@@ -146,7 +178,7 @@ func handleCustomEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := subscriptions.SendAllSockets(msgTypeCustom, event); err != nil {
+	if err := subscriptions.SendAllSockets(msgTypeCustom, event, false, true); err != nil {
 		http.Error(w, errors.Wrap(err, "send to sockets").Error(), http.StatusInternalServerError)
 		return
 	}
@@ -167,7 +199,7 @@ func handleSetLastFollower(w http.ResponseWriter, r *http.Request) {
 		log.WithError(err).Error("Unable to update persistent store")
 	}
 
-	if err := subscriptions.SendAllSockets(msgTypeStore, store); err != nil {
+	if err := subscriptions.SendAllSockets(msgTypeStore, store, false, false); err != nil {
 		log.WithError(err).Error("Unable to send update to all sockets")
 	}
 
@@ -214,7 +246,7 @@ func handleUpdateSocket(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	connLock.Lock()
-	if err := conn.WriteJSON(compileSocketMessage(msgTypeStore, store)); err != nil {
+	if err := conn.WriteJSON(compileSocketMessage(msgTypeStore, store, false, nil)); err != nil {
 		log.WithError(err).Error("Unable to send initial state")
 		return
 	}
@@ -246,7 +278,31 @@ func handleUpdateSocket(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		// FIXME: Do we need this?
-		_ = p
+		var recvMsg socketMessage
+		if err = json.Unmarshal(p, &recvMsg); err != nil {
+			log.Warn("Got unreadable message from socket, disconnecting...")
+			return
+		}
+
+		switch recvMsg.Type {
+		case msgTypeReplay:
+			if err = store.WithModRLock(func() error {
+				connLock.Lock()
+				defer connLock.Unlock()
+
+				for _, evt := range store.Events {
+					if err := conn.WriteJSON(compileSocketMessage(evt.Type, evt.Message, true, &evt.Time)); err != nil {
+						return errors.Wrap(err, "sending replay message")
+					}
+				}
+
+				return nil
+			}); err != nil {
+				log.WithError(err).Error("Unable to replay messages")
+			}
+
+		default:
+			log.WithField("type", recvMsg.Type).Warn("Got unexpected message type from frontend")
+		}
 	}
 }

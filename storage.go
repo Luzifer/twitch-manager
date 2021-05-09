@@ -21,7 +21,7 @@ type subscriber struct {
 type storedEvent struct {
 	Time    time.Time
 	Type    string
-	Message map[string]interface{}
+	Message json.RawMessage
 }
 
 type storage struct {

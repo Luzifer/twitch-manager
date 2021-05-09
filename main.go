@@ -135,7 +135,7 @@ func main() {
 			}
 
 		case <-timerForceSync.C:
-			if err := subscriptions.SendAllSockets(msgTypeStore, store); err != nil {
+			if err := subscriptions.SendAllSockets(msgTypeStore, store, false, false); err != nil {
 				log.WithError(err).Error("Unable to send store to all sockets")
 			}
 

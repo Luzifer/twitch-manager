@@ -87,7 +87,7 @@ func handleDemoAlert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := subscriptions.SendAllSockets(event, data); err != nil {
+	if err := subscriptions.SendAllSockets(event, data, false, false); err != nil {
 		http.Error(w, errors.Wrap(err, "send to sockets").Error(), http.StatusInternalServerError)
 		return
 	}

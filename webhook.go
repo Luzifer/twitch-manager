@@ -81,7 +81,7 @@ func handleWebHookPush(w http.ResponseWriter, r *http.Request) {
 			"message": payload.Message,
 		}
 
-		if err := subscriptions.SendAllSockets(msgTypeDonation, fields); err != nil {
+		if err := subscriptions.SendAllSockets(msgTypeDonation, fields, false, true); err != nil {
 			log.WithError(err).Error("Unable to send update to all sockets")
 		}
 
@@ -124,7 +124,7 @@ func handleWebHookPush(w http.ResponseWriter, r *http.Request) {
 				"followed_at": f.FollowedAt,
 			}
 
-			if err := subscriptions.SendAllSockets(msgTypeFollow, fields); err != nil {
+			if err := subscriptions.SendAllSockets(msgTypeFollow, fields, false, true); err != nil {
 				log.WithError(err).Error("Unable to send update to all sockets")
 			}
 
@@ -147,7 +147,7 @@ func handleWebHookPush(w http.ResponseWriter, r *http.Request) {
 		logger.WithError(err).Error("Unable to update persistent store")
 	}
 
-	if err := store.WithModRLock(func() error { return subscriptions.SendAllSockets(msgTypeStore, store) }); err != nil {
+	if err := store.WithModRLock(func() error { return subscriptions.SendAllSockets(msgTypeStore, store, false, false) }); err != nil {
 		logger.WithError(err).Error("Unable to send update to all sockets")
 	}
 }
