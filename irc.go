@@ -255,6 +255,7 @@ func (ircHandler) handleTwitchUsernotice(m *irc.Message) {
 		fields := map[string]interface{}{
 			"from":     displayName,
 			"is_resub": m.Tags["msg-id"] == "resub",
+			"message":  m.Trailing(),
 			"paid_for": m.Tags["msg-param-multimonth-duration"],
 			"streak":   m.Tags["msg-param-streak-months"],
 			"tier":     m.Tags["msg-param-sub-plan"],

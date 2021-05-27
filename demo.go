@@ -54,6 +54,7 @@ func handleDemoAlert(w http.ResponseWriter, r *http.Request) {
 		data = map[string]interface{}{
 			"from":     demoIssuer,
 			"is_resub": false,
+			"message":  "",
 			"paid_for": "1",
 			"streak":   "1",
 			"tier":     "1000",
@@ -65,6 +66,7 @@ func handleDemoAlert(w http.ResponseWriter, r *http.Request) {
 		data = map[string]interface{}{
 			"from":     demoIssuer,
 			"is_resub": true,
+			"message":  "Already 12 months! PogChamp",
 			"paid_for": "1",
 			"streak":   "12",
 			"tier":     "1000",
