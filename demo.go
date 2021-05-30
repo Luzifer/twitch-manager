@@ -21,7 +21,8 @@ func handleDemoAlert(w http.ResponseWriter, r *http.Request) {
 	case msgTypeBits:
 		data = map[string]interface{}{
 			"from":         demoIssuer,
-			"amount":       5,
+			"amount":       500,
+			"message":      "ShowLove500 Thanks for the Stream! myuserHype",
 			"total_amount": 1337,
 		}
 

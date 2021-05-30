@@ -194,8 +194,9 @@ func (ircHandler) handleTwitchPrivmsg(m *irc.Message) {
 		strDisplayName := string(displayName)
 
 		fields := map[string]interface{}{
-			"from":   displayName,
-			"amount": bitAmount,
+			"from":    displayName,
+			"amount":  bitAmount,
+			"message": m.Trailing(),
 		}
 
 		store.WithModLock(func() error {
