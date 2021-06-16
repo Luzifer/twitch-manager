@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -21,16 +22,16 @@ func handleDemoAlert(w http.ResponseWriter, r *http.Request) {
 	case msgTypeBits:
 		data = map[string]interface{}{
 			"from":         demoIssuer,
-			"amount":       500,
-			"message":      "ShowLove500 Thanks for the Stream! myuserHype",
-			"total_amount": 1337,
+			"amount":       demoGetParamInt(r, "amount", 500),
+			"message":      demoGetParamStr(r, "message", "ShowLove500 Thanks for the Stream! myuserHype"),
+			"total_amount": demoGetParamInt(r, "total_amount", 1337),
 		}
 
 	case msgTypeDonation:
 		data = map[string]interface{}{
 			"name":    demoIssuer,
-			"amount":  6.66,
-			"message": "You rock!",
+			"amount":  demoGetParamFloat(r, "amount", 6.66),
+			"message": demoGetParamStr(r, "message", "You rock!"),
 		}
 
 	case msgTypeFollow:
@@ -42,13 +43,13 @@ func handleDemoAlert(w http.ResponseWriter, r *http.Request) {
 	case msgTypeHost:
 		data = map[string]interface{}{
 			"from":        demoIssuer,
-			"viewerCount": 5,
+			"viewerCount": demoGetParamInt(r, "viewerCount", 5),
 		}
 
 	case msgTypeRaid:
 		data = map[string]interface{}{
 			"from":        demoIssuer,
-			"viewerCount": 5,
+			"viewerCount": demoGetParamInt(r, "viewerCount", 5),
 		}
 
 	case msgTypeSub:
@@ -56,10 +57,10 @@ func handleDemoAlert(w http.ResponseWriter, r *http.Request) {
 			"from":     demoIssuer,
 			"is_resub": false,
 			"message":  "",
-			"paid_for": "1",
-			"streak":   "1",
-			"tier":     "1000",
-			"total":    "1",
+			"paid_for": demoGetParamInt(r, "paid_for", 1),
+			"streak":   demoGetParamInt(r, "streak", 1),
+			"tier":     demoGetParamStr(r, "tier", "1000"),
+			"total":    1,
 		}
 
 	case "resub": // Execption to the known types to trigger resubs
@@ -67,22 +68,22 @@ func handleDemoAlert(w http.ResponseWriter, r *http.Request) {
 		data = map[string]interface{}{
 			"from":     demoIssuer,
 			"is_resub": true,
-			"message":  "Already 12 months! PogChamp",
-			"paid_for": "1",
-			"streak":   "12",
-			"tier":     "1000",
-			"total":    "12",
+			"message":  demoGetParamStr(r, "message", "Already 12 months! PogChamp"),
+			"paid_for": demoGetParamInt(r, "paid_for", 1),
+			"streak":   demoGetParamInt(r, "streak", 12),
+			"tier":     demoGetParamStr(r, "tier", "1000"),
+			"total":    demoGetParamInt(r, "total", 12),
 		}
 
 	case msgTypeSubGift:
 		data = map[string]interface{}{
 			"from":     demoIssuer,
-			"is_anon":  false,
-			"gift_to":  "Tester",
-			"paid_for": 1,
-			"streak":   1,
-			"tier":     "1000",
-			"total":    1,
+			"is_anon":  demoGetParamStr(r, "is_anon", "false") == "true",
+			"gift_to":  demoGetParamStr(r, "gift_to", "Tester"),
+			"paid_for": demoGetParamInt(r, "paid_for", 1),
+			"streak":   demoGetParamInt(r, "streak", 12),
+			"tier":     demoGetParamStr(r, "tier", "1000"),
+			"total":    demoGetParamInt(r, "total", 12),
 		}
 
 	default:
@@ -96,4 +97,41 @@ func handleDemoAlert(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
+}
+
+func demoGetParamFloat(r *http.Request, key string, fallback float64) float64 {
+	v := r.FormValue(key)
+	if v == "" {
+		return fallback
+	}
+
+	vi, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return fallback
+	}
+
+	return vi
+}
+
+func demoGetParamInt(r *http.Request, key string, fallback int) int {
+	v := r.FormValue(key)
+	if v == "" {
+		return fallback
+	}
+
+	vi, err := strconv.Atoi(v)
+	if err != nil {
+		return fallback
+	}
+
+	return vi
+}
+
+func demoGetParamStr(r *http.Request, key, fallback string) string {
+	v := r.FormValue(key)
+	if v == "" {
+		return fallback
+	}
+
+	return v
 }
