@@ -263,6 +263,11 @@ func (ircHandler) handleTwitchUsernotice(m *irc.Message) {
 			"total":    m.Tags["msg-param-cumulative-months"],
 		}
 
+		if fields["message"] == m.Params[0] {
+			// Empty resub-messages will cause the message to be the channel name
+			delete(fields, "message")
+		}
+
 		// Update store
 		strDisplayName := string(displayName)
 		var duration int64
