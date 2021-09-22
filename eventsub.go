@@ -98,7 +98,7 @@ func handleEventsubPush(w http.ResponseWriter, r *http.Request) {
 
 	// Read message
 	if err := json.NewDecoder(body).Decode(&message); err != nil {
-		log.WithError(err).Errorf("Unable to decode eventsys message")
+		log.WithError(err).Errorf("Unable to decode eventsub message")
 		http.Error(w, errors.Wrap(err, "parsing message").Error(), http.StatusBadRequest)
 		return
 	}
@@ -123,7 +123,7 @@ func handleEventsubPush(w http.ResponseWriter, r *http.Request) {
 	case "channel.follow":
 		var evt eventSubEventFollow
 		if err := json.Unmarshal(message.Event, &evt); err != nil {
-			log.WithError(err).Errorf("Unable to decode eventsys event payload")
+			log.WithError(err).Errorf("Unable to decode eventsub event payload")
 			http.Error(w, errors.Wrap(err, "parsing message").Error(), http.StatusBadRequest)
 			return
 		}
@@ -177,7 +177,7 @@ func handleEventsubPush(w http.ResponseWriter, r *http.Request) {
 func registerEventSubHooks() error {
 	hookURL := strings.Join([]string{
 		strings.TrimRight(cfg.BaseURL, "/"),
-		"api", "eventsys",
+		"api", "eventsub",
 	}, "/")
 
 	ctx, cancel := context.WithTimeout(context.Background(), twitchRequestTimeout)
@@ -274,7 +274,7 @@ func registerEventSubHooks() error {
 			return errors.Errorf("unexpected status %d: %s", resp.StatusCode, body)
 		}
 
-		logger.Debug("Registered eventsys subscription")
+		logger.Debug("Registered eventsub subscription")
 	}
 
 	return nil
