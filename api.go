@@ -140,6 +140,7 @@ func registerAPI(r *mux.Router) {
 	r.HandleFunc("/api/follows/set-last/{name}", handleSetLastFollower).Methods(http.MethodPut)
 	r.HandleFunc("/api/subscribe", handleUpdateSocket).Methods(http.MethodGet)
 	r.HandleFunc("/api/webhook/{type}", handleWebHookPush)
+	r.HandleFunc("/api/eventsys", handleEventsubPush)
 }
 
 func handleCustomAlert(w http.ResponseWriter, r *http.Request) {

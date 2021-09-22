@@ -24,12 +24,12 @@ var (
 		LogLevel              string        `flag:"log-level" default:"info" description:"Log level (debug, info, warn, error, fatal)"`
 		StoreFile             string        `flag:"store-file" default:"store.json.gz" description:"File to store the state to"`
 		TwitchClient          string        `flag:"twitch-client" default:"" description:"Client ID to act as" validate:"nonzero"`
+		TwitchSecret          string        `flag:"twitch-secret" default:"" description:"Secret to the given Client ID" validate:"nonzero"`
 		TwitchID              string        `flag:"twitch-id" default:"" description:"ID of the user of the overlay" validate:"nonzero"`
 		TwitchToken           string        `flag:"twitch-token" default:"" description:"OAuth token valid for client"`
 		UpdateFromAPIInterval time.Duration `flag:"update-from-api-interval" default:"10m" description:"How often to ask the API for real values"`
 		VersionAndExit        bool          `flag:"version" default:"false" description:"Prints current version and exits"`
 		WebHookSecret         string        `flag:"webhook-secret" default:"" description:"Secret to use for HMAC hashing of webhook payload"`
-		WebHookTimeout        time.Duration `flag:"webhook-timeout" default:"15m" description:"When to re-register the webhooks"`
 	}{}
 
 	store *storage
@@ -94,7 +94,7 @@ func main() {
 		}
 	}()
 
-	if err = registerWebHooks(); err != nil {
+	if err = registerEventSubHooks(); err != nil {
 		log.WithError(err).Fatal("Unable to register webhooks")
 	}
 
@@ -102,10 +102,9 @@ func main() {
 		irc             *ircHandler
 		ircDisconnected = make(chan struct{}, 1)
 
-		timerAssetCheck      = time.NewTicker(cfg.AssetCheckInterval)
-		timerForceSync       = time.NewTicker(cfg.ForceSyncInterval)
-		timerUpdateFromAPI   = time.NewTicker(cfg.UpdateFromAPIInterval)
-		timerWebhookRegister = time.NewTicker(cfg.WebHookTimeout)
+		timerAssetCheck    = time.NewTicker(cfg.AssetCheckInterval)
+		timerForceSync     = time.NewTicker(cfg.ForceSyncInterval)
+		timerUpdateFromAPI = time.NewTicker(cfg.UpdateFromAPIInterval)
 	)
 
 	ircDisconnected <- struct{}{}
@@ -142,11 +141,6 @@ func main() {
 		case <-timerUpdateFromAPI.C:
 			if err := updateStats(); err != nil {
 				log.WithError(err).Error("Unable to update statistics from API")
-			}
-
-		case <-timerWebhookRegister.C:
-			if err := registerWebHooks(); err != nil {
-				log.WithError(err).Fatal("Unable to re-register webhooks")
 			}
 
 		}
